@@ -4,9 +4,11 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"unicode"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,8 +16,43 @@ import (
 	"github.com/google/uuid"
 )
 
+
 type BpeLoader interface {
 	LoadTiktokenBpe(tiktokenBpeFile string) (map[string]int, error)
+}
+
+func isValidBase64(s string) bool {
+	re := regexp.MustCompile(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`)
+	return re.MatchString(s)
+}
+
+func isValidBase64Fast(input string) bool {
+
+	//check format base64
+	if len(input)%4 != 0 {
+		return false
+	}
+
+	//check characters
+	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+	for _, c := range input {
+		if !unicode.IsPrint(c) || !strings.ContainsRune(validChars, c) {
+			return false
+		}
+	}
+
+	//check padding str
+	paddingCount := 0
+	for i := len(input) - 1; i >= 0 && input[i] == '='; i-- {
+		paddingCount++
+	}
+
+	if paddingCount > 2 {
+		return false
+	}
+
+	return true
+
 }
 
 func readFile(blobpath string) ([]byte, error) {
@@ -83,6 +120,9 @@ func loadTiktokenBpe(tiktokenBpeFile string) (map[string]int, error) {
 			continue
 		}
 		parts := strings.Split(line, " ")
+		if !isValidBase64Fast(parts[0]) {
+			parts[0]=""
+		}
 		token, err := base64.StdEncoding.DecodeString(parts[0])
 		if err != nil {
 			return nil, err

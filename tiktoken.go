@@ -30,6 +30,22 @@ func GetEncoding(encodingName string) (*Tiktoken, error) {
 	return NewTiktoken(pbe, enc, specialTokensSet), nil
 }
 
+func GetWhisperEncoding(name string, numLanguages int, encodingDir string) (*Tiktoken, error) {
+	enc, err := getWhisperEncoding(name, numLanguages, encodingDir)
+	if err != nil {
+		return nil, err
+	}
+	pbe, err := NewCoreBPE(enc.MergeableRanks, enc.SpecialTokens, enc.PatStr)
+	if err != nil {
+		return nil, err
+	}
+	specialTokensSet := map[string]any{}
+	for k := range enc.SpecialTokens {
+		specialTokensSet[k] = true
+	}
+	return NewTiktoken(pbe, enc, specialTokensSet), nil
+}
+
 func EncodingForModel(modelName string) (*Tiktoken, error) {
 	if encodingName, ok := MODEL_TO_ENCODING[modelName]; ok {
 		return GetEncoding(encodingName)

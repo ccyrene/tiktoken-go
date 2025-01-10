@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"fmt"
+	"path/filepath"
 )
 
 const ENDOFTEXT string = "<|endoftext|>"
@@ -102,6 +104,18 @@ func getEncoding(encodingName string) (*Encoding, error) {
 	return encodingMap[encodingName], nil
 }
 
+func getWhisperEncoding(name string, numLanguages int, encodingDir string) (*Encoding, error) {
+	l.Lock()
+	defer l.Unlock()
+
+	initEncoding, err := initWhisperEncoding(name, numLanguages, encodingDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return initEncoding, nil
+}
+
 func initEncoding(encodingName string) (*Encoding, error) {
 	switch encodingName {
 	case MODEL_O200K_BASE:
@@ -117,6 +131,46 @@ func initEncoding(encodingName string) (*Encoding, error) {
 	default:
 		return nil, errors.New("Unknown encoding: " + encodingName)
 	}
+}
+
+func initWhisperEncoding(name string, numLanguages int, encodingDir string) (*Encoding, error) {
+	vocabPath := filepath.Join(encodingDir, fmt.Sprintf("%s.tiktoken", name))
+	return whisper(vocabPath, numLanguages)
+}
+
+func whisper(vocabPath string, numLanguages int) (*Encoding, error) {
+	ranks, err := bpeLoader.LoadTiktokenBpe(vocabPath)
+	if err != nil {
+		return nil, err
+	}
+
+	nVocab := len(ranks)
+	special_tokens := make(map[string]int)
+	specials := []string{"<|endoftext|>", "<|startoftranscript|>"}
+
+	for _, langCode := range LANGUAGES {
+		specials = append(specials, fmt.Sprintf("<|%s|>", langCode))
+	}
+
+	specials = append(specials, "<|translate|>", "<|transcribe|>", "<|startoflm|>", "<|startofprev|>", "<|nospeech|>", "<|notimestamps|>")
+
+	for i := 0; i <= 1500; i++ {
+		specials = append(specials, fmt.Sprintf("<|%.2f|>", float64(i)*0.02))
+	}
+
+	for _, token := range specials {
+		special_tokens[token] = nVocab
+		nVocab++
+	}
+
+	return &Encoding{
+		Name:           filepath.Base(vocabPath),
+		PatStr:         `'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+`,
+		MergeableRanks: ranks,
+		SpecialTokens:  special_tokens,
+		ExplicitNVocab: nVocab,
+	}, nil
+
 }
 
 func o200k_base() (*Encoding, error) {
@@ -185,13 +239,6 @@ func p50k_base() (*Encoding, error) {
 		return nil, err
 	}
 	special_tokens := map[string]int{ENDOFTEXT: 50256}
-
-	// ExplicitNVocab := 50281
-	// max_tokens := int(math.Max(float64(len(special_tokens)), float64(len(ranks))))
-
-	// if len(special_tokens)+len(ranks) != max_tokens {
-	// 	return nil, errors.New("special_tokens and ranks must be disjoint")
-	// }
 
 	return &Encoding{
 		Name:           MODEL_P50K_BASE,
