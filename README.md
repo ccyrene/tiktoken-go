@@ -13,8 +13,8 @@ go get github.com/herta-witch/tiktoken-go
 ```
 
 ## Addition Features
-	- Whisper's tokenizer
-	- Handle invalid base64 string in .tiktoken file
+ - Whisper's tokenizer
+ - Handle invalid base64 string in .tiktoken file
 
 ## Examples
 ### Get Token By Encoding
