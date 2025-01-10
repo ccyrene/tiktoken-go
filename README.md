@@ -32,7 +32,7 @@ func main()  {
 	numLanguages := 100
 	encodingDir := "./"
 
-	tke, err := GetWhisperEncoding("multilingual", 100, "./")
+	tke, err := tiktoken.GetWhisperEncoding("multilingual", 100, "./")
 	if err != nil {
 		err = fmt.Errorf("getEncoding: %v", err)
 		return
