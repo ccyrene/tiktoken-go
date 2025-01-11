@@ -28,11 +28,10 @@ import (
 )
 
 func main()  {
-	tiktokenFileName := "multilingual"
-	numLanguages := 100
-	encodingDir := "./"
+	encodingName := "whisper"
+	encodingPath := "./multilingual.tiktoken"
 
-	tke, err := tiktoken.GetWhisperEncoding("multilingual", 100, "./")
+	tke, err := tiktoken.GetLocalEncoding(encodingName, encodingPath)
 	if err != nil {
 		err = fmt.Errorf("getEncoding: %v", err)
 		return

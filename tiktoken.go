@@ -30,8 +30,8 @@ func GetEncoding(encodingName string) (*Tiktoken, error) {
 	return NewTiktoken(pbe, enc, specialTokensSet), nil
 }
 
-func GetWhisperEncoding(name string, numLanguages int, encodingDir string) (*Tiktoken, error) {
-	enc, err := getWhisperEncoding(name, numLanguages, encodingDir)
+func GetLocalEncoding(encodingName string, encodingPath string) (*Tiktoken, error) {
+	enc, err := getLocalEncoding(encodingName, encodingPath)
 	if err != nil {
 		return nil, err
 	}

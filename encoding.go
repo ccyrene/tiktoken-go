@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 	"fmt"
-	"path/filepath"
 )
 
 const ENDOFTEXT string = "<|endoftext|>"
@@ -13,6 +12,13 @@ const FIM_PREFIX string = "<|fim_prefix|>"
 const FIM_MIDDLE string = "<|fim_middle|>"
 const FIM_SUFFIX string = "<|fim_suffix|>"
 const ENDOFPROMPT string = "<|endofprompt|>"
+const NOSPEECH string = "<|nospeech|>"
+const STARTOFLM string = "<|startoflm|>"
+const TRANSLATE string = "<|translate|>"
+const TRANSCRIBE string = "<|transcribe|>"
+const STARTOFPREV string = "<|startofprev|>"
+const NOTIMESTAMPS string = "<|notimestamps|>"
+const STARTOFTRANSCRIPT string = "<|startoftranscript|>"
 
 const (
 	MODEL_O200K_BASE  string = "o200k_base"
@@ -20,6 +26,7 @@ const (
 	MODEL_P50K_BASE   string = "p50k_base"
 	MODEL_P50K_EDIT   string = "p50k_edit"
 	MODEL_R50K_BASE   string = "r50k_base"
+	MODEL_WHISPER	  string = "whisper"
 )
 
 var MODEL_TO_ENCODING = map[string]string{
@@ -65,6 +72,8 @@ var MODEL_TO_ENCODING = map[string]string{
 	"code-search-ada-code-001":     MODEL_R50K_BASE,
 	// open source
 	"gpt2": "gpt2",
+	//whisper
+	"whisper": MODEL_WHISPER,
 }
 
 var MODEL_PREFIX_TO_ENCODING = map[string]string{
@@ -104,16 +113,18 @@ func getEncoding(encodingName string) (*Encoding, error) {
 	return encodingMap[encodingName], nil
 }
 
-func getWhisperEncoding(name string, numLanguages int, encodingDir string) (*Encoding, error) {
+func getLocalEncoding(encodingName string, encodingPath string) (*Encoding, error) {
 	l.Lock()
 	defer l.Unlock()
-
-	initEncoding, err := initWhisperEncoding(name, numLanguages, encodingDir)
+	if encoding, ok := encodingMap[encodingName]; ok {
+		return encoding, nil
+	}
+	initEncoding, err := initLocalEncoding(encodingName, encodingPath)
 	if err != nil {
 		return nil, err
 	}
-
-	return initEncoding, nil
+	encodingMap[encodingName] = initEncoding
+	return encodingMap[encodingName], nil
 }
 
 func initEncoding(encodingName string) (*Encoding, error) {
@@ -133,26 +144,30 @@ func initEncoding(encodingName string) (*Encoding, error) {
 	}
 }
 
-func initWhisperEncoding(name string, numLanguages int, encodingDir string) (*Encoding, error) {
-	vocabPath := filepath.Join(encodingDir, fmt.Sprintf("%s.tiktoken", name))
-	return whisper(vocabPath, numLanguages)
+func initLocalEncoding(encodingName string, encodingPath string) (*Encoding, error) {
+	switch encodingName {
+	case MODEL_WHISPER:
+		return whisper(encodingPath)
+	default:
+		return nil, errors.New("Unknown encoding: " + encodingName)
+	}
 }
 
-func whisper(vocabPath string, numLanguages int) (*Encoding, error) {
-	ranks, err := bpeLoader.LoadTiktokenBpe(vocabPath)
+func whisper(encodingPath string) (*Encoding, error) {
+	ranks, err := bpeLoader.LoadTiktokenBpe(encodingPath)
 	if err != nil {
 		return nil, err
 	}
 
 	nVocab := len(ranks)
 	special_tokens := make(map[string]int)
-	specials := []string{"<|endoftext|>", "<|startoftranscript|>"}
+	specials := []string{ENDOFTEXT, STARTOFTRANSCRIPT}
 
 	for _, langCode := range LANGUAGES {
 		specials = append(specials, fmt.Sprintf("<|%s|>", langCode))
 	}
 
-	specials = append(specials, "<|translate|>", "<|transcribe|>", "<|startoflm|>", "<|startofprev|>", "<|nospeech|>", "<|notimestamps|>")
+	specials = append(specials, TRANSLATE, TRANSCRIBE, STARTOFLM, STARTOFPREV, NOSPEECH, NOTIMESTAMPS)
 
 	for i := 0; i <= 1500; i++ {
 		specials = append(specials, fmt.Sprintf("<|%.2f|>", float64(i)*0.02))
@@ -164,7 +179,7 @@ func whisper(vocabPath string, numLanguages int) (*Encoding, error) {
 	}
 
 	return &Encoding{
-		Name:           filepath.Base(vocabPath),
+		Name:           MODEL_WHISPER,
 		PatStr:         `'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+`,
 		MergeableRanks: ranks,
 		SpecialTokens:  special_tokens,

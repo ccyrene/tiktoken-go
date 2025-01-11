@@ -7,7 +7,7 @@ import (
 
 func TestEncoding(t *testing.T) {
 	ass := assert.New(t)
-	enc, err := GetWhisperEncoding("multilingual", 100, "./")
+	enc, err := GetLocalEncoding("whisper", "./multilingual.tiktoken")
 	ass.Nil(err, "Encoding  init should not be nil")
 
 	tokens := enc.Encode("<|startofprev|> Nvidia<|startoftranscript|><|en|><|transcribe|>", []string{"all"}, nil)
@@ -29,7 +29,7 @@ func TestEncoding(t *testing.T) {
 
 func TestDecoding(t *testing.T) {
 	ass := assert.New(t)
-	enc, err := GetWhisperEncoding("multilingual", 100, "./")
+	enc, err := GetLocalEncoding("whisper", "./multilingual.tiktoken")
 	ass.Nil(err, "Encoding  init should not be nil")
 
 	sourceTokens := []int{50258, 50259, 50360, 50364}
