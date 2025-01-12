@@ -9,7 +9,7 @@ This is a port of the original [tiktoken](https://github.com/openai/tiktoken).
 ## Install
 
 ```bash
-go get github.com/esylenn/tiktoken-go
+go get github.com/ccyrene/tiktoken-go
 ```
 
 ## Addition Features
@@ -24,7 +24,7 @@ package main
 
 import (
     "fmt"
-    "github.com/esylenn/tiktoken-go"
+    "github.com/ccyrene/tiktoken-go"
 )
 
 func main()  {
